@@ -317,6 +317,36 @@ function initContactForm() {
   const NAME_ENTRY = 'entry.28418843';
   const EMAIL_ENTRY = 'entry.1718396892';
   const MESSAGE_ENTRY = 'entry.1644287480';
+  const DESTINATION_EMAIL = 'apdatha@gmail.com';
+
+  const checkIsMobileOrTablet = () => {
+    return window.innerWidth <= 992 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  };
+
+  // Adjust button text on mobile & tablet
+  const updateSubmitButtonLabel = () => {
+    if (checkIsMobileOrTablet()) {
+      submitBtn.innerHTML = '<span>✉ SEND VIA GMAIL</span>';
+    } else {
+      submitBtn.innerHTML = '<span>REQUEST CONSULTATION</span>';
+    }
+  };
+  updateSubmitButtonLabel();
+  window.addEventListener('resize', updateSubmitButtonLabel);
+
+  // Smart handler for email links across the site
+  const emailLinks = document.querySelectorAll('.email-direct-item, .footer-email-link');
+  emailLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
+      const isMobile = checkIsMobileOrTablet();
+      if (!isMobile) {
+        // Desktop: open Gmail web compose tab
+        e.preventDefault();
+        window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${DESTINATION_EMAIL}&su=${encodeURIComponent('Concert Booking Inquiry - Datha Sisters')}`, '_blank', 'noopener,noreferrer');
+      }
+      // On mobile / tablet, standard href="mailto:..." opens Gmail app natively
+    });
+  });
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -324,7 +354,47 @@ function initContactForm() {
     const name = document.getElementById('userName')?.value.trim();
     const email = document.getElementById('userEmail')?.value.trim();
     const message = document.getElementById('userMessage')?.value.trim();
+    const isMobile = checkIsMobileOrTablet();
 
+    if (isMobile) {
+      // Mobile & Tablet flow: Open Gmail directly with apdatha@gmail.com already set
+      if (!message) {
+        // If message is empty, prompt or open blank compose
+        showFeedback('Please type your message in the box above, or tap "Open Gmail" to compose directly in the Gmail app.', 'error');
+        return;
+      }
+
+      const subject = name ? `Concert Booking Inquiry - ${name}` : 'Concert Booking Inquiry - Datha Sisters';
+      let bodyText = message;
+      if (name || email) {
+        bodyText = `Name: ${name || 'N/A'}\nEmail: ${email || 'N/A'}\n\nMessage:\n${message}`;
+      }
+
+      const mailtoUrl = `mailto:${DESTINATION_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
+
+      // Silently backup to Google Form if email & name are also provided
+      if (name && email && message) {
+        const formData = new FormData();
+        formData.append(NAME_ENTRY, name);
+        formData.append(EMAIL_ENTRY, email);
+        formData.append(MESSAGE_ENTRY, message);
+        fetch(GOOGLE_FORM_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          body: formData
+        }).catch(() => {});
+      }
+
+      showFeedback(`<strong>Opening Gmail...</strong><br>Recipient is set to <strong>${DESTINATION_EMAIL}</strong>. Please tap Send in Gmail to deliver your message!`, 'success', true);
+
+      // Trigger native Gmail app compose
+      setTimeout(() => {
+        window.location.href = mailtoUrl;
+      }, 200);
+      return;
+    }
+
+    // Desktop flow: standard form validation and Google Form submission
     if (!name || !email || !message) {
       showFeedback('Please fill out all fields.', 'error');
       return;
