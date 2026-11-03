@@ -37,23 +37,56 @@ function initHeader() {
 function initNavigation() {
   const menuToggle = document.getElementById('menuToggle');
   const mainNav = document.getElementById('mainNav');
+  const header = document.getElementById('header');
   const navLinks = document.querySelectorAll('.nav-link');
 
   if (menuToggle && mainNav) {
-    menuToggle.addEventListener('click', () => {
+    const closeMenu = () => {
+      menuToggle.setAttribute('aria-expanded', 'false');
+      mainNav.classList.remove('open');
+      if (header) header.classList.remove('nav-open');
+      document.body.classList.remove('menu-open');
+      document.body.style.overflow = '';
+    };
+
+    const openMenu = () => {
+      menuToggle.setAttribute('aria-expanded', 'true');
+      mainNav.classList.add('open');
+      if (header) header.classList.add('nav-open');
+      document.body.classList.add('menu-open');
+      document.body.style.overflow = 'hidden';
+    };
+
+    menuToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
       const isExpanded = menuToggle.getAttribute('aria-expanded') === 'true';
-      menuToggle.setAttribute('aria-expanded', !isExpanded);
-      mainNav.classList.toggle('open');
-      document.body.style.overflow = !isExpanded ? 'hidden' : '';
+      if (isExpanded) {
+        closeMenu();
+      } else {
+        openMenu();
+      }
     });
 
-    // Close mobile nav when clicking any link
-    navLinks.forEach(link => {
+    // Close mobile nav when clicking any link inside the navigation drawer
+    const drawerLinks = mainNav.querySelectorAll('a');
+    drawerLinks.forEach(link => {
       link.addEventListener('click', () => {
-        menuToggle.setAttribute('aria-expanded', 'false');
-        mainNav.classList.remove('open');
-        document.body.style.overflow = '';
+        closeMenu();
       });
+    });
+
+    // Close on Escape key press
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && mainNav.classList.contains('open')) {
+        closeMenu();
+      }
+    });
+
+    // Reset drawer if resized back to desktop
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 992 && mainNav.classList.contains('open')) {
+        closeMenu();
+      }
     });
   }
 
